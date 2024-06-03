@@ -13,7 +13,7 @@ export const env = createEnv({
     POSTGRES_PRISMA_URL: z.string().optional(),
     POSTGRES_URL_NON_POOLING: z.string().optional(),
     // Backend MongoDB, for a more complete developer data platform.
-    MDB_URI: z.string().optional(),
+    MONGODB_URI: z.string().optional(),
 
     // LLM: OpenAI
     OPENAI_API_KEY: z.string().optional(),
