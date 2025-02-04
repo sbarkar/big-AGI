@@ -32,25 +32,29 @@ type TRequestMessages = TRequest['messages'];
 export function aixToOpenAIChatCompletions(openAIDialect: OpenAIDialects, model: AixAPI_Model, chatGenerate: AixAPIChatGenerate_Request, jsonOutput: boolean, streaming: boolean): TRequest {
 
   // Dialect incompatibilities -> Hotfixes
-  const hotFixAlternateUserAssistantRoles = openAIDialect === 'perplexity';
+  const hotFixAlternateUserAssistantRoles = openAIDialect === 'deepseek' || openAIDialect === 'perplexity';
   const hotFixRemoveEmptyMessages = openAIDialect === 'perplexity';
   const hotFixRemoveStreamOptions = openAIDialect === 'azure' || openAIDialect === 'mistral';
   const hotFixSquashMultiPartText = openAIDialect === 'deepseek';
-  const hotFixThrowCannotFC = openAIDialect === 'deepseek' || openAIDialect === 'openrouter' /* OpenRouter FC support is not good (as of 2024-07-15) */ || openAIDialect === 'perplexity';
+  const hotFixThrowCannotFC = openAIDialect === 'openrouter' /* OpenRouter FC support is not good (as of 2024-07-15) */ || openAIDialect === 'perplexity';
+  const hotFixVndORIncludeReasoning = openAIDialect === 'openrouter'; // [OpenRouter, 2025-01-24] has a special `include_reasoning` field to show the chain of thought
 
   // Model incompatibilities -> Hotfixes
 
   // [OpenAI] - o1 models
   // - o1 models don't support system messages, we could hotfix this here once and for all, but we want to transfer the responsibility to the UI for better messaging to the user
   // - o1 models also use the new 'max_completion_tokens' rather than 'max_tokens', breaking API compatibility, so we have to address it here
-  const hotFixOpenAIo1Family = openAIDialect === 'openai' && (model.id === 'o1' || model.id.startsWith('o1-'));
+  const hotFixOpenAIOFamily = openAIDialect === 'openai' && (
+    model.id === 'o1' || model.id.startsWith('o1-') ||
+    model.id === 'o3' || model.id.startsWith('o3-')
+  );
 
   // Throw if function support is needed but missing
   if (chatGenerate.tools?.length && hotFixThrowCannotFC)
     throw new Error('This service does not support function calls');
 
   // Convert the chat messages to the OpenAI 4-Messages format
-  let chatMessages = _toOpenAIMessages(chatGenerate.systemMessage, chatGenerate.chatSequence, hotFixOpenAIo1Family);
+  let chatMessages = _toOpenAIMessages(chatGenerate.systemMessage, chatGenerate.chatSequence, hotFixOpenAIOFamily);
 
   // Apply hotfixes
   if (hotFixSquashMultiPartText)
@@ -71,7 +75,7 @@ export function aixToOpenAIChatCompletions(openAIDialect: OpenAIDialects, model:
     tool_choice: chatGenerate.toolsPolicy && _toOpenAIToolChoice(openAIDialect, chatGenerate.toolsPolicy),
     parallel_tool_calls: undefined,
     max_tokens: model.maxTokens !== undefined ? model.maxTokens : undefined,
-    temperature: model.temperature !== undefined ? model.temperature : undefined,
+    ...(model.temperature !== null ? { temperature: model.temperature !== undefined ? model.temperature : undefined, } : {}),
     top_p: undefined,
     n: hotFixOnlySupportN1 ? undefined : 0, // NOTE: we choose to not support this at the API level - most downstram ecosystem supports 1 only, which is the default
     stream: streaming,
@@ -81,6 +85,10 @@ export function aixToOpenAIChatCompletions(openAIDialect: OpenAIDialects, model:
     stop: undefined,
     user: undefined,
   };
+
+  // [OpenRouter, 2025-01-24]
+  if (hotFixVndORIncludeReasoning)
+    payload.include_reasoning = true;
 
   // Top-P instead of temperature
   if (model.topP !== undefined) {
@@ -96,7 +104,7 @@ export function aixToOpenAIChatCompletions(openAIDialect: OpenAIDialects, model:
     _fixVndOaiRestoreMarkdown_Inline(payload);
   }
 
-  if (hotFixOpenAIo1Family)
+  if (hotFixOpenAIOFamily)
     payload = _fixRequestForOpenAIO1_maxCompletionTokens(payload);
 
   if (hotFixRemoveStreamOptions)
@@ -122,8 +130,8 @@ function _fixAlternateUserAssistantRoles(chatMessages: TRequestMessages): TReque
     // treat intermediate system messages as user messages
     if (acc.length > 0 && historyItem.role === 'system') {
       historyItem = {
+        ...historyItem,
         role: 'user',
-        content: historyItem.content,
       };
     }
 
@@ -246,7 +254,12 @@ function _toOpenAIMessages(systemMessage: AixMessages_SystemMessage | null, chat
   // Add the system message
   if (msg0TextParts.length)
     chatMessages.push({
-      role: !hotFixOpenAIo1Family ? 'system' : 'developer', // NOTE: o1Family in this case is not o1-preview as it's sporting the Sys0ToUsr0 hotfix
+      /**
+       * Notes:
+       * o1Family in this case is not o1-preview as it's sporting the Sys0ToUsr0 hotfix
+       * o3-mini accepts both system and developer roles, and they seem to have the same effects
+       */
+      role: !hotFixOpenAIo1Family ? 'system' : 'developer',
       content: _toApproximateOpanAIFlattenSystemMessage(msg0TextParts),
     });
 

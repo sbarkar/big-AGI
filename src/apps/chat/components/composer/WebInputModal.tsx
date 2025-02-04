@@ -17,26 +17,39 @@ import { asValidURL } from '~/common/util/urlUtils';
 // configuration
 const MAX_URLS = 5;
 
+type WebInputData = {
+  url: string,
+  // attachImages?: boolean,
+}
 
 type WebInputModalInputs = {
-  urls: { value: string }[];
+  links: WebInputData[];
 }
 
 
 function WebInputModal(props: {
   onClose: () => void,
-  onWebLinks: (urls: string[]) => void,
+  onWebLinks: (urls: WebInputData[]) => void,
 }) {
 
   // state
   const { control: formControl, handleSubmit: formHandleSubmit, formState: { isValid: formIsValid, isDirty: formIsDirty } } = useForm<WebInputModalInputs>({
-    values: { urls: [{ value: '' }] },
+    values: { links: [{ url: '' }] },
     // mode: 'onChange', // validate on change
   });
-  const { fields: formFields, append: formFieldsAppend, remove: formFieldsRemove } = useFieldArray({ control: formControl, name: 'urls' });
+  const { fields: formFields, append: formFieldsAppend, remove: formFieldsRemove } = useFieldArray({ control: formControl, name: 'links' });
+  const firstInputRef = React.useRef<HTMLInputElement>(null);
 
   // derived
   const urlFieldCount = formFields.length;
+
+  // [effect] auto-focus first input
+  React.useEffect(() => {
+    setTimeout(() => {
+      if (firstInputRef.current)
+        firstInputRef.current.focus();
+    }, 0);
+  }, []);
 
 
   // handlers
@@ -45,19 +58,18 @@ function WebInputModal(props: {
 
   const handleClose = React.useCallback(() => onClose(), [onClose]);
 
-  const handleSubmit = React.useCallback(({ urls }: WebInputModalInputs) => {
+  const handleSubmit = React.useCallback(({ links }: WebInputModalInputs) => {
     // clean and prefix URLs
-    const cleanUrls = urls.reduce((acc, { value }) => {
-      const trimmed = (value || '').trim();
-      if (!trimmed) return acc;
-      // noinspection HttpUrlsUsage
-      const normalized = (!trimmed.startsWith('http://') && !trimmed.startsWith('https://'))
-        ? 'https://' + trimmed
-        : trimmed;
-      if (asValidURL(normalized))
-        acc.push(normalized);
+    const cleanUrls = links.reduce((acc, { url, ...linkRest }) => {
+      const trimmed = (url || '').trim();
+      if (trimmed) {
+        // this form uses a 'relaxed' URL validation, meaning one can write 'big-agi.com' and we'll assume https://
+        const relaxedUrl = asValidURL(trimmed, true);
+        if (relaxedUrl)
+          acc.push({ url: relaxedUrl, ...linkRest });
+      }
       return acc;
-    }, [] as string[]);
+    }, [] as WebInputData[]);
     if (!cleanUrls.length) {
       addSnackbar({ key: 'invalid-urls', message: 'Please enter at least one valid web address', type: 'issue', overrides: { autoHideDuration: 2000 } });
       return;
@@ -92,18 +104,22 @@ function WebInputModal(props: {
             <Controller
               key={field.id}
               control={formControl}
-              name={`urls.${index}.value`}
+              name={`links.${index}.url`}
               rules={{ required: 'Please enter a valid URL' }}
               render={({ field: { value, onChange }, fieldState: { error } }) => (
                 <FormControl error={!!error}>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Input
-                      autoFocus={index === 0}
                       required={index === 0}
                       placeholder='https://...'
                       endDecorator={extractYoutubeVideoIDFromURL(value) ? <YouTubeIcon sx={{ color: 'red' }} /> : undefined}
                       value={value}
                       onChange={onChange}
+                      slotProps={index !== 0 ? undefined : {
+                        input: {
+                          ref: firstInputRef,
+                        },
+                      }}
                       sx={{ flex: 1 }}
                     />
                     {urlFieldCount > 1 && (
@@ -131,7 +147,7 @@ function WebInputModal(props: {
             color='neutral'
             variant='soft'
             disabled={urlFieldCount >= MAX_URLS}
-            onClick={() => formFieldsAppend({ value: '' })}
+            onClick={() => formFieldsAppend({ url: '' })}
             startDecorator={<AddIcon />}
           >
             Another
@@ -155,7 +171,7 @@ function WebInputModal(props: {
 }
 
 
-export function useWebInputModal(onAttachWebLinks: (urls: string[]) => void) {
+export function useWebInputModal(onAttachWebLinks: (urls: WebInputData[]) => void) {
 
   // state
   const [open, setOpen] = React.useState(false);
