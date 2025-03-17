@@ -8,7 +8,7 @@ import WidthWideIcon from '@mui/icons-material/WidthWide';
 
 import { FormLabelStart } from '~/common/components/forms/FormLabelStart';
 import { FormRadioControl } from '~/common/components/forms/FormRadioControl';
-import { useUIPreferencesStore } from '~/common/state/store-ui';
+import { useUIPreferencesStore } from '~/common/stores/store-ui';
 import { isPwa } from '~/common/util/pwaUtils';
 import { optimaOpenModels } from '~/common/layout/optima/useOptima';
 import { useIsMobile } from '~/common/components/useMatchMedia';
@@ -28,9 +28,11 @@ function ModelsSetupButton() {
     startDecorator={<BuildCircleIcon />}
     sx={{
       '--Icon-fontSize': 'var(--joy-fontSize-xl2)',
+      minWidth: 150,
     }}
   >
-    Models
+    {/*Admin Models*/}
+    AI Models
   </Button>;
 }
 
@@ -65,7 +67,7 @@ export function AppChatSettingsUI() {
 
     <FormControl orientation='horizontal' sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
       <FormLabelStart title='AI Models'
-                      description='Setup' />
+                      description='Configure' />
       <ModelsSetupButton />
     </FormControl>
 

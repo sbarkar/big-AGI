@@ -3,15 +3,30 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Box, IconButton, Typography } from '@mui/joy';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
-import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 
 import { BeamStoreApi, useBeamStore } from '~/modules/beam/store-beam.hooks';
 
 import { ConfirmationModal } from '~/common/components/modals/ConfirmationModal';
 import { GoodTooltip } from '~/common/components/GoodTooltip';
 import { KeyStroke } from '~/common/components/KeyStroke';
+import { Release } from '~/common/app.release';
 import { ShortcutKey, useGlobalShortcuts } from '~/common/components/shortcuts/useGlobalShortcuts';
 import { animationBackgroundBeamGather, animationColorBeamScatterINV, animationEnterBelow } from '~/common/util/animUtils';
+
+
+const _styles = {
+
+  barScatter: {
+    animation: `${animationColorBeamScatterINV} 5s infinite, ${animationEnterBelow} 0.6s`,
+  } as const,
+
+  barGather: {
+    animation: `${animationBackgroundBeamGather} 3s infinite, ${animationEnterBelow} 0.6s`,
+    px: 1.5, py: 0.5,
+  } as const,
+
+} as const;
 
 
 export function ChatBarAltBeam(props: {
@@ -72,11 +87,11 @@ export function ChatBarAltBeam(props: {
       <Typography level='title-md'>
         <Box
           component='span'
-          sx={
-            isGatheringAny ? { animation: `${animationBackgroundBeamGather} 3s infinite, ${animationEnterBelow} 0.6s`, px: 1.5, py: 0.5 }
-              : isScattering ? { animation: `${animationColorBeamScatterINV} 5s infinite, ${animationEnterBelow} 0.6s` }
-                : { fontWeight: 'lg' }
-          }>
+          sx={Release.Features.LIGHTER_ANIMATIONS ? undefined
+            : isGatheringAny ? _styles.barGather
+              : isScattering ? _styles.barScatter
+                : undefined}
+        >
           {isGatheringAny ? 'Merging...' : isScattering ? 'Beaming...' : isEditMode ? 'Beam Edit' : 'Beam'}
         </Box>
         {(!isGatheringAny && !isScattering && !isEditMode) && ' Mode'}
@@ -89,7 +104,7 @@ export function ChatBarAltBeam(props: {
         {!props.isMobile && (
           <GoodTooltip variantOutlined title={<Box sx={{ p: 1 }}>Maximize</Box>}>
             <IconButton size='sm' onClick={handleMaximizeBeam}>
-              <FullscreenRoundedIcon />
+              <OpenInFullIcon sx={{ fontSize: 'md' }} />
             </IconButton>
           </GoodTooltip>
         )}

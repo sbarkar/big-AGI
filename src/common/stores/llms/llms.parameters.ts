@@ -51,7 +51,7 @@ export const DModelParameterRegistry = {
     range: [0.0, 2.0] as const,
     nullable: {
       meaning: 'Explicitly avoid sending temperature to upstream API',
-    },
+    } as const,
     requiredFallback: FALLBACK_LLM_PARAM_TEMPERATURE,
   } as const,
 
@@ -64,6 +64,17 @@ export const DModelParameterRegistry = {
     range: [0.0, 1.0] as const,
     requiredFallback: 1.0,
     incompatibleWith: ['temperature'] as const,
+  } as const,
+
+  llmVndAntThinkingBudget: {
+    label: 'Thinking Budget',
+    type: 'integer' as const,
+    description: 'Budget for extended thinking',
+    range: [1024, 65536] as const,
+    initialValue: 8192,
+    nullable: {
+      meaning: 'Disable extended thinking',
+    } as const,
   } as const,
 
   llmVndGeminiShowThoughts: {
@@ -88,6 +99,25 @@ export const DModelParameterRegistry = {
     initialValue: true,
   } as const,
 
+  llmVndOaiWebSearchContext: {
+    label: 'Search Context Size',
+    type: 'enum' as const,
+    description: 'Amount of context retrieved from the web',
+    values: ['low', 'medium', 'high'] as const,
+    requiredFallback: 'medium',
+  } as const,
+
+  llmVndOaiWebSearchGeolocation: {
+    // NOTE: for now this is a booolean to enable/disable using client-side geolocation, but
+    // in the future we could have it a more complex object. Note that the payload that comes
+    // back if of type AixAPI_Model.userGeolocation, which is the AIX Wire format for the
+    // location payload.
+    label: 'Add User Location (Geolocation API)',
+    type: 'boolean' as const,
+    description: 'Approximate location for search results',
+    initialValue: false,
+  } as const,
+
 } as const;
 
 
@@ -110,7 +140,10 @@ export type DModelParameterId = keyof typeof DModelParameterRegistry;
 type _EnumValues<T> = T extends { type: 'enum', values: readonly (infer U)[] } ? U : never;
 
 type DModelParameterValue<T extends DModelParameterId> =
-  typeof DModelParameterRegistry[T]['type'] extends 'integer' ? number | null :
+  typeof DModelParameterRegistry[T]['type'] extends 'integer'
+    ? typeof DModelParameterRegistry[T] extends { nullable: any }
+      ? number | null
+      : number :
     typeof DModelParameterRegistry[T]['type'] extends 'float'
       ? typeof DModelParameterRegistry[T] extends { nullable: any }
         ? number | null

@@ -10,13 +10,13 @@
  * We centralize here the version information of the app, to have a uniform configuration surface.
  */
 export const Release = {
-  // CHANGE ME - this is the tenant ID, 'open' reserved for GitHub
-  TenantId: 'open',
+  // CHANGE ME - this is the tenant ID, 'dev' reserved for development only, 'open' reserved for GitHub
+  TenantSlug: 'open',
 
   App: {
-    pl: 'v2-dev',
-    versionCode: '2.0.0-rc1',       // 1.92.0 sequentially...
-    versionName: 'Big-AGI V2 RC1',
+    versionCode: '2.0.0-open-rc2',       // 1.92.0 sequentially...
+    versionName: 'Big-AGI 2',
+    releaseNotes: '',
   },
 
   // Future compatibility
@@ -24,13 +24,28 @@ export const Release = {
     // ...
     BACKEND_REVALIDATE_INTERVAL: 6 * 60 * 60 * 1000, // 6 hours
     // DISABLE_PRECISE_TOKENIZER: false, // future optimization: disables the correct tokenizer fully or over a certain input size (e.g. 1k)
+    LIGHTER_ANIMATIONS: false, // optimization: disables some animations for performance
   },
 
   // this is here to trigger revalidation of data, e.g. models refresh
   Monotonics: {
-    Aix: 11,
-    NewsVersion: 191,
+    Aix: 14,
+    NewsVersion: 192,
   },
+
+  // Frontend: pretty features
+  TechLevels: {
+    AIX: '1.1', Apply: '0.8', Beam: '2.0', LFS: '0.5', /*Precog: '0.1',*/ React: '1.5',
+  },
+  AiFunctions: [
+    // from `ContextChatGenerate_schema`
+    'auto-chart', 'auto-diagram', 'auto-ui',
+    'chat-call', 'chat-compress', 'chat-persona', 'chat-summary', 'chat-title',
+    'create-attach-prompts', 'create-image-prompt', 'create-persona',
+    'diff-whole',
+    'fixup',
+    'reason-beam', 'reason-merge', 'reason-react',
+  ],
 
   /**
    * We force explicit declaration of the caller.
