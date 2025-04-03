@@ -1,14 +1,14 @@
-import { _createEventSourceDemuxer } from './stream.demuxer.sse';
+import { createFastEventSourceDemuxer } from './stream.demuxer.fastsse';
 
 
 export namespace AixDemuxers {
 
   /**
    * The format of the stream: 'sse' or 'json-nl'
-   * - 'sse' is the default format, and is used by all vendors except Ollama
+   * - 'fast-sse' is our own parser, optimized for performance. to be preferred when possible over 'sse' (check for full compatibility with the upstream)
    * - 'json-nl' is used by Ollama
    */
-  export type StreamDemuxerFormat = 'sse' | 'json-nl' | null;
+  export type StreamDemuxerFormat = 'fast-sse' | 'json-nl' | null;
 
 
   /**
@@ -17,8 +17,8 @@ export namespace AixDemuxers {
    */
   export function createStreamDemuxer(format: StreamDemuxerFormat): StreamDemuxer {
     switch (format) {
-      case 'sse':
-        return _createEventSourceDemuxer();
+      case 'fast-sse':
+        return createFastEventSourceDemuxer();
       case 'json-nl':
         return _createJsonNlDemuxer();
       case null:
@@ -30,12 +30,17 @@ export namespace AixDemuxers {
   export type DemuxedEvent = {
     type: 'event' | 'reconnect-interval';
     name?: string;
-    data: string;
+    data: string; // in case of 'reconnect-interval' this is the string representation of the number (in milliseconds)
+    // eventId?: string; // unused
   };
 
   export type StreamDemuxer = {
     demux: (chunk: string) => DemuxedEvent[];
     remaining: () => string;
+
+    // unused, but may be provided by some demuxers
+    lastEventId?: () => string | undefined; // not used for now - SSE defines it for the stream
+    reconnectInterval?: () => number | undefined; // not used for now - SSE announces it
   };
 
 }
