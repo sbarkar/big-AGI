@@ -7,3 +7,7 @@ export { setupClientUncaughtErrorsLogging } from './interceptors/logger.unhandle
 
 // re-export the core functionality
 export { logger } from './logger.client';
+
+// re-export the module logger factory
+export type { ClientLogger } from './logger.types';
+export { createModuleLogger } from './logger.factory';
