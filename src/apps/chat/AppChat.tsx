@@ -90,6 +90,8 @@ const chatMessageListSx: SxProps = {
 
 const chatBeamWrapperSx: SxProps = {
   flexGrow: 1,
+  // we added these after removing the minSize={20} (%) from the containing panel.
+  minWidth: '18rem',
   // minHeight: 'calc(100vh - 69px - var(--AGI-Nav-width))',
 };
 
@@ -449,11 +451,11 @@ export function AppChat() {
   const barAltTitle = showAltTitleBar ? focusedChatTitle ?? 'No Chat' : null;
 
   const focusedBarContent = React.useMemo(() => beamOpenStoreInFocusedPane
-      ? <ChatBarAltBeam beamStore={beamOpenStoreInFocusedPane} isMobile={isMobile} />
+      ? <ChatBarAltBeam conversationTitle={focusedChatTitle ?? 'No Chat'} beamStore={beamOpenStoreInFocusedPane} isMobile={isMobile} />
       : (barAltTitle === null)
         ? <ChatBarDropdowns conversationId={focusedPaneConversationId} llmDropdownRef={llmDropdownRef} personaDropdownRef={personaDropdownRef} />
         : <ChatBarAltTitle conversationId={focusedPaneConversationId} conversationTitle={barAltTitle} />
-    , [barAltTitle, beamOpenStoreInFocusedPane, focusedPaneConversationId, isMobile],
+    , [barAltTitle, beamOpenStoreInFocusedPane, focusedChatTitle, focusedPaneConversationId, isMobile],
   );
 
 
