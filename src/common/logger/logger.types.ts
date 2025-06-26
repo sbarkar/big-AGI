@@ -54,6 +54,7 @@ export interface LogOptions {
   source?: LogSource;
   action?: Omit<LogEntryAction, 'completed' | 'completedTimestamp'>; // Single action convenience
   actions?: Omit<LogEntryAction, 'completed' | 'completedTimestamp'>[]; // Multiple actions
+  skipDebuggerBreak?: boolean; // Skip debugger break even if applicable to the level/build/env
 }
 
 /** Potential action associated with an entry */
@@ -79,6 +80,9 @@ export interface LogEntry {
   shown?: boolean;           // Whether displayed to user (for notifications)
   dismissed?: boolean;       // Whether explicitly dismissed by user
   hasPendingActions?: boolean; // Calculated flag: has actions not completed/dismissed
+  
+  // Repetition tracking
+  repetitionCount?: number;  // Number of times this exact message was repeated
 }
 
 type LogEntryId = string;

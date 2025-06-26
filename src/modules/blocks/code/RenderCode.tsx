@@ -25,6 +25,7 @@ import { RenderCodeSyntax } from './code-renderers/RenderCodeSyntax';
 import { heuristicIsBlockPureHTML } from '../danger-html/RenderDangerousHtml';
 import { heuristicIsCodePlantUML, RenderCodePlantUML, usePlantUmlSvg } from './code-renderers/RenderCodePlantUML';
 import { useOpenInWebEditors } from './code-buttons/useOpenInWebEditors';
+import { useStickyCodeOverlay } from './useStickyCodeOverlay';
 
 // style for line-numbers
 import './RenderCode.css';
@@ -50,12 +51,27 @@ interface RenderCodeBaseProps {
   noCopyButton?: boolean,
   optimizeLightweight?: boolean,
   onReplaceInCode?: (search: string, replace: string) => boolean;
+  renderHideTitle?: boolean,
   sx?: SxProps,
 }
 
 function RenderCode(props: RenderCodeBaseProps) {
   return (
-    <React.Suspense fallback={<Box component='code' sx={{ p: 1.5, display: 'block', ...props.sx }} />}>
+    <React.Suspense
+      fallback={
+        // Mimic the structure of the RenderCodeImpl - to mitigate race conditions that could cause problematic rendering
+        // of code (where two components were missing from the structure)
+        <Box sx={renderCodecontainerSx}>
+          <Box component='code' className='language-unknown' aria-label='Displaying Code...' sx={{ p: 1.5, display: 'block', ...props.sx }}>
+            <Box component='span' sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Box component='span' className='code-container' aria-label='Code block'>
+                {/* Just wait until the correct implementation renders */}
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      }
+    >
       <_DynamicPrism {...props} />
     </React.Suspense>
   );
@@ -116,6 +132,9 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
 
   // external state
   const { isFullscreen, enterFullscreen, exitFullscreen } = useFullscreenElement(fullScreenElementRef);
+  const { overlayRef, overlayBoundaryRef } = useStickyCodeOverlay({ disabled: props.optimizeLightweight || isFullscreen });
+
+  // sticky overlay positioning
   const { uiComplexityMode, showLineNumbers, showSoftWrap, setShowLineNumbers, setShowSoftWrap } = useUIPreferencesStore(useShallow(state => ({
     uiComplexityMode: state.complexityMode,
     showLineNumbers: state.renderCodeLineNumbers,
@@ -190,7 +209,7 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
 
 
   // Title
-  let showBlockTitle = (blockTitle != inferredCodeLanguage) && (blockTitle.includes('.') || blockTitle.includes('://'));
+  let showBlockTitle = !props.renderHideTitle && (blockTitle != inferredCodeLanguage) && (blockTitle.includes('.') || blockTitle.includes('://'));
   // Beautify: hide the block title when rendering HTML
   if (renderHTML)
     showBlockTitle = false;
@@ -231,6 +250,7 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
 
   return (
     <Box
+      ref={overlayBoundaryRef}
       // onMouseEnter={handleMouseOverEnter}
       // onMouseLeave={handleMouseOverLeave}
       sx={renderCodecontainerSx}
@@ -246,7 +266,7 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
         {/* Markdown Title (File/Type) */}
         {showBlockTitle && (
           <Sheet sx={{ backgroundColor: 'background.popup', boxShadow: 'xs', borderRadius: 'sm', border: '1px solid var(--joy-palette-neutral-outlinedBorder)', m: -0.5, mb: 1.5 }}>
-            <Typography level='body-sm' sx={{ px: 1, py: 0.5, color: 'text.primary' }}>
+            <Typography level='body-sm' sx={{ px: 1, py: 0.5, color: 'text.primary' }} className='agi-ellipsize'>
               {blockTitle}
               {/*{inferredCodeLanguage}*/}
             </Typography>
@@ -258,7 +278,7 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
             chars in a non-proper way.
             Since this damages the 'fullscreen' operation, we restore it somehow.
         */}
-        <Box sx={!isFullscreen ? undefined : { flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box component='span' sx={!isFullscreen ? undefined : { flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Renders HTML, or inline SVG, inline plantUML rendered, or highlighted code */}
           {renderHTML ? <RenderCodeHtmlIFrame htmlCode={code} isFullscreen={isFullscreen} />
             : renderMermaid ? <RenderCodeMermaid mermaidCode={code} fitScreen={fitScreen} />
@@ -271,7 +291,11 @@ function RenderCodeImpl(props: RenderCodeBaseProps & {
 
       {/* [overlay] Buttons (Code blocks (SVG, diagrams, HTML, syntax, ...)) */}
       {(ALWAYS_SHOW_OVERLAY /*|| isHovering*/) && (
-        <Box className={overlayButtonsClassName} sx={overlayGridSx}>
+        <Box
+          ref={overlayRef}
+          className={overlayButtonsClassName}
+          sx={overlayGridSx}
+        >
 
           {/* [row 1] */}
           <Box sx={overlayFirstRowSx}>

@@ -74,15 +74,18 @@ const tooltipMetricsGridSx: SxProps = {
   // grid of 2 columns, the first fits the labels, the other expends with the values
   display: 'grid',
   gridTemplateColumns: 'auto 1fr',
-  gap: 0.5,
+  columnGap: 1,
+  rowGap: 0.5,
 };
 
 
 /** Whole message background color, based on the message role and state */
-export function messageBackground(messageRole: DMessageRole | string, wasEdited: boolean, isAssistantIssue: boolean): string {
+export function messageBackground(messageRole: DMessageRole | string, userCommand: 'draw' | 'react' | false, wasEdited: boolean, isAssistantIssue: boolean): string {
   switch (messageRole) {
     case 'user':
-      return 'primary.plainHoverBg'; // was .background.level1
+      return userCommand === 'draw' ? 'warning.softActiveBg'
+        : userCommand === 'react' ? 'success.softHoverBg'
+          : 'primary.plainHoverBg'; // was .background.level1
     case 'assistant':
       return isAssistantIssue ? 'danger.softBg' : 'background.surface';
     case 'system':
@@ -269,6 +272,7 @@ function _prettyMetrics(metrics: DMessageGenerator['metrics'], uiComplexityMode:
 
   const showWaitingTime = metrics?.dtStart !== undefined && (uiComplexityMode === 'extra' || metrics.dtStart >= 10000);
   const showSpeedSection = uiComplexityMode !== 'minimal' && (showWaitingTime || metrics?.vTOutInner !== undefined);
+  const showTimeSection = showSpeedSection && !!metrics?.dtAll;
 
   const costCode = metrics.$code ? _prettyCostCode(metrics.$code) : null;
 
@@ -307,8 +311,12 @@ function _prettyMetrics(metrics: DMessageGenerator['metrics'], uiComplexityMode:
         })</small>
       </>}
     </div>}
-    {costCode && metrics?.$c !== undefined ? <div>Costs:</div> : <div />}
+    {costCode && <div>{metrics?.$c !== undefined ? 'Costs:' : ''}</div>}
     {costCode && <div><em>{costCode}</em></div>}
+
+    {/* Time */}
+    {showTimeSection && <div>Time:</div>}
+    {showTimeSection && <div><b>{(Math.round(metrics.dtAll! / 100) / 10).toLocaleString()}</b> s</div>}
   </Box>;
 }
 
@@ -472,14 +480,27 @@ export function prettyShortChatModelName(model: string | undefined): string {
 }
 
 function _prettyAnthropicModelName(modelId: string): string | null {
-  const claudeIndex = modelId.indexOf('claude-3');
-  if (claudeIndex === -1) return null;
+  if (modelId.indexOf('claude-') === -1) return null; // not a Claude model
+
+  // must match any known prefix
+  let claudeIndex = -1;
+  const claudePrefixes = ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4', 'claude-3', 'claude-2'];
+  for (const prefix of claudePrefixes) {
+    const index = modelId.indexOf(prefix);
+    if (index !== -1) {
+      claudeIndex = index;
+      break;
+    }
+  }
 
   const subStr = modelId.slice(claudeIndex);
   const version =
-    subStr.includes('-3-7-') ? '3.7'
-      : subStr.includes('-3-5-') ? '3.5'
-        : '3';
+    subStr.includes('-5') ? '5'
+      : subStr.includes('-4') ? '4'
+        : subStr.includes('-3-7') ? '3.7'
+          : subStr.includes('-3-5') ? '3.5'
+            : subStr.includes('-3') ? '3'
+              : '?';
 
   if (subStr.includes(`-opus`)) return `Claude ${version} Opus`;
   if (subStr.includes(`-sonnet`)) return `Claude ${version} Sonnet`;

@@ -1,4 +1,4 @@
-import type { DBlobAssetId } from '~/modules/dblobs/dblobs.types';
+import type { DBlobAssetId } from '~/common/stores/blob/dblobs-portability';
 
 import type { LiveFileId } from '~/common/livefile/liveFile.types';
 import { agiId } from '~/common/util/idUtils';
@@ -163,6 +163,7 @@ export type DVoidWebCitation = {
   url: string,
   title: string,
   refNumber?: number,
+  pubTs?: number, // publication timestamp
   ranges: readonly { startIndex: number, endIndex: number, textSnippet?: string }[],
 };
 
@@ -408,9 +409,9 @@ function _create_CodeExecutionResponse_Part(id: string, error: boolean | string,
   return { pt: 'tool_response', id, error, response: { type: 'code_execution', result, executor }, environment };
 }
 
-export function createDVoidWebCitation(url: string, title: string, refNumber?: number, rangeStartIndex?: number, rangeEndIndex?: number, rangeTextSnippet?: string): DVoidWebCitation {
+export function createDVoidWebCitation(url: string, title: string, refNumber?: number, rangeStartIndex?: number, rangeEndIndex?: number, rangeTextSnippet?: string, pubTs?: number): DVoidWebCitation {
   return {
-    type: 'citation', url, title, ...(refNumber !== undefined ? { refNumber } : {}),
+    type: 'citation', url, title, ...(refNumber !== undefined ? { refNumber } : {}), ...(pubTs !== undefined ? { pubTs } : {}),
     ranges: (rangeStartIndex !== undefined && rangeEndIndex !== undefined) ? [{
       startIndex: rangeStartIndex,
       endIndex: rangeEndIndex,
@@ -572,15 +573,19 @@ export function filterDocAttachmentFragments(fragments: DMessageAttachmentFragme
  * Updates a fragment with the edited text, ensuring the fragment retains its type and structure.
  * @returns A new fragment with the edited text applied or null if the fragment type isn't handled.
  */
+export function updateFragmentWithEditedText(fragment: DMessageContentFragment, editedText: string): DMessageContentFragment | null;
+export function updateFragmentWithEditedText(fragment: DMessageAttachmentFragment, editedText: string): DMessageAttachmentFragment | null;
+export function updateFragmentWithEditedText(fragment: DMessageFragment, editedText: string): DMessageFragment | null;
 export function updateFragmentWithEditedText(
   fragment: DMessageFragment,
   editedText: string,
 ): DMessageFragment | null {
 
-  if (editedText.length === 0) {
-    // If the edited text is empty, we may choose to delete the fragment (depending on the caller's logic)
-    return null;
-  }
+  // NOTE: we transfer the responsibility of this to the caller
+  // if (editedText.length === 0) {
+  //   // If the edited text is empty, we may choose to delete the fragment (depending on the caller's logic)
+  //   return null;
+  // }
 
   if (isContentFragment(fragment)) {
     const { fId, part } = fragment;
