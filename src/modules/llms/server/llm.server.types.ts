@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod/v4';
 
 import { LLMS_ALL_INTERFACES } from '~/common/stores/llms/llms.types';
 
@@ -84,6 +84,9 @@ const ModelParameterSpec_schema = z.object({
     'llmVndOaiWebSearchGeolocation',
     'llmVndPerplexityDateFilter',
     'llmVndPerplexitySearchMode',
+    'llmVndXaiSearchMode',
+    'llmVndXaiSearchSources',
+    'llmVndXaiSearchDateFilter',
   ]),
   required: z.boolean().optional(),
   hidden: z.boolean().optional(),
